@@ -13,6 +13,7 @@ set -euo pipefail
 #   TOKENIZER=<path_or_name>   # only needed for TensorRT engine path
 #   MAX_BATCH_SIZE=64 TRUST_REMOTE_CODE=1
 #   MAX_SEQ_LEN=<int>
+#   MAX_INPUT_LEN=<int>
 #   KV_CACHE_FREE_GPU_MEMORY_FRACTION=0.25
 #   EXTRA_LLM_API_OPTIONS=/path/to/config.yml  # if unset, a default config is generated in-container
 
@@ -34,6 +35,7 @@ PP_SIZE="${PP_SIZE:-}"
 EP_SIZE="${EP_SIZE:-}"
 TOKENIZER="${TOKENIZER:-}"
 MAX_SEQ_LEN="${MAX_SEQ_LEN:-}"
+MAX_INPUT_LEN="${MAX_INPUT_LEN:-}"
 
 # If token is not in the current environment, try loading it from the user's
 # bash login profile (e.g. ~/.bash_profile) without printing the secret.
@@ -90,6 +92,7 @@ if [[ -n "${EXTRA_LLM_API_OPTIONS:-}" ]]; then
 else
   cat > /tmp/extra-llm-api-config.yml <<EOF
 print_iter_log: false
+$(if [[ -n "${MAX_INPUT_LEN:-}" ]]; then echo "max_input_len: ${MAX_INPUT_LEN}"; fi)
 kv_cache_config:
   dtype: "auto"
   free_gpu_memory_fraction: ${KV_CACHE_FREE_GPU_MEMORY_FRACTION}
@@ -125,6 +128,7 @@ exec docker run --name trtllm_llm_server --rm "${DOCKER_TTY_ARGS[@]}" \
   -e "TOKENIZER=${TOKENIZER}" \
   -e "MAX_BATCH_SIZE=${MAX_BATCH_SIZE}" \
   -e "MAX_SEQ_LEN=${MAX_SEQ_LEN}" \
+  -e "MAX_INPUT_LEN=${MAX_INPUT_LEN}" \
   -e "TRUST_REMOTE_CODE=${TRUST_REMOTE_CODE}" \
   -e "KV_CACHE_FREE_GPU_MEMORY_FRACTION=${KV_CACHE_FREE_GPU_MEMORY_FRACTION}" \
   -e "EXTRA_LLM_API_OPTIONS=${EXTRA_LLM_API_OPTIONS}" \
