@@ -2,7 +2,7 @@
 
 This project is about serving LLMs on the DGX platform.
 
-This is running on a DGX Spark.
+This is running on a DGX AI super computer.
 
 Here is some relevant documentation:
 
