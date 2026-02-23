@@ -7,7 +7,7 @@ This repo contains scripts to launch a TensorRT-LLM OpenAI-compatible API server
 Start server manually on port `8355`:
 
 ```bash
-cd /home/ianleon/Server/trt
+cd "$HOME/Server/trt"
 ./serve_openai_8355.sh
 ```
 
@@ -24,7 +24,7 @@ This project includes a `systemd` service that starts at boot, runs in the backg
 1. Install and start the service:
 
 ```bash
-cd /home/ianleon/Server/trt
+cd "$HOME/Server/trt"
 sudo ./install_trtllm_service.sh
 ```
 
@@ -58,4 +58,3 @@ journalctl -u trtllm-openai-8355.service -f
 - Unit file template: `systemd/trtllm-openai-8355.service`
 - Env template: `systemd/trtllm-openai-8355.env`
 - Installer: `install_trtllm_service.sh`
-
