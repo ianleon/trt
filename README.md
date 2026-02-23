@@ -2,6 +2,13 @@
 
 This repo contains scripts to launch a TensorRT-LLM OpenAI-compatible API server.
 
+## Requirements
+
+- Docker with GPU runtime support on the DGX host.
+- Hugging Face token (`HF_TOKEN`) for downloading gated models (for example `meta-llama/*`).
+  - Manual run: if `HF_TOKEN` is exported in your bash profile, `serve_openai_8355.sh` will pick it up.
+  - systemd service: set `HF_TOKEN=...` in `/etc/default/trtllm-openai-8355` (systemd does not load your shell profile).
+
 ## Quick Start
 
 Start server manually on port `8355`:
@@ -14,7 +21,7 @@ cd "$HOME/Server/trt"
 Set a different model:
 
 ```bash
-MODEL=meta-llama/Llama-3.1-8B-Instruct ./serve_openai_8355.sh
+MODEL=Qwen/Qwen2.5-7B-Instruct ./serve_openai_8355.sh
 ```
 
 Lower VRAM reservation (useful for smaller models):
@@ -45,12 +52,20 @@ Common settings:
 - `PORT=8355`
 - `DOCKER_IMAGE=...`
 - `HF_TOKEN=...` (if needed)
+- `MAX_SEQ_LEN=16384`
 - `KV_CACHE_FREE_GPU_MEMORY_FRACTION=0.25` (lower this to reduce VRAM use)
 
 3. Restart after config changes:
 
 ```bash
 sudo systemctl restart trtllm-openai-8355.service
+```
+
+Or run the helper script to apply env + restart + show verification logs:
+
+```bash
+cd "$HOME/Server/trt"
+./apply_service_config_8355.sh
 ```
 
 4. Verify service health:

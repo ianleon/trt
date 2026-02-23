@@ -12,6 +12,7 @@ set -euo pipefail
 #   TP_SIZE=<int> PP_SIZE=<int> EP_SIZE=<int>
 #   TOKENIZER=<path_or_name>   # only needed for TensorRT engine path
 #   MAX_BATCH_SIZE=64 TRUST_REMOTE_CODE=1
+#   MAX_SEQ_LEN=<int>
 #   KV_CACHE_FREE_GPU_MEMORY_FRACTION=0.25
 #   EXTRA_LLM_API_OPTIONS=/path/to/config.yml  # if unset, a default config is generated in-container
 
@@ -22,6 +23,7 @@ HOST="${HOST:-0.0.0.0}"
 PORT="${PORT:-8355}"
 DOCKER_IMAGE="${DOCKER_IMAGE:-nvcr.io/nvidia/tensorrt-llm/release:1.2.0rc6}"
 HF_TOKEN="${HF_TOKEN:-}"
+HF_TOKEN="${HF_TOKEN:-${HUGGING_FACE_HUB_TOKEN:-}}"
 MAX_BATCH_SIZE="${MAX_BATCH_SIZE:-64}"
 TRUST_REMOTE_CODE="${TRUST_REMOTE_CODE:-1}"
 KV_CACHE_FREE_GPU_MEMORY_FRACTION="${KV_CACHE_FREE_GPU_MEMORY_FRACTION:-0.25}"
@@ -31,6 +33,18 @@ TP_SIZE="${TP_SIZE:-}"
 PP_SIZE="${PP_SIZE:-}"
 EP_SIZE="${EP_SIZE:-}"
 TOKENIZER="${TOKENIZER:-}"
+MAX_SEQ_LEN="${MAX_SEQ_LEN:-}"
+
+# If token is not in the current environment, try loading it from the user's
+# bash login profile (e.g. ~/.bash_profile) without printing the secret.
+if [[ -z "${HF_TOKEN}" && -n "${HOME:-}" ]] && command -v bash >/dev/null 2>&1; then
+  PROFILE_TOKEN="$(
+    bash -lc 'printf %s "${HF_TOKEN:-${HUGGING_FACE_HUB_TOKEN:-}}"' 2>/dev/null || true
+  )"
+  if [[ -n "${PROFILE_TOKEN}" ]]; then
+    HF_TOKEN="${PROFILE_TOKEN}"
+  fi
+fi
 
 if ! command -v docker >/dev/null 2>&1; then
   echo "Error: docker not found in PATH." >&2
@@ -41,7 +55,7 @@ fi
 if ! docker info >/dev/null 2>&1; then
   if command -v sudo >/dev/null 2>&1; then
     echo "Docker access requires elevated privileges; re-running with sudo..." >&2
-    exec sudo --preserve-env=MODEL,HOST,PORT,DOCKER_IMAGE,HF_TOKEN,MAX_BATCH_SIZE,TRUST_REMOTE_CODE,KV_CACHE_FREE_GPU_MEMORY_FRACTION,EXTRA_LLM_API_OPTIONS,BACKEND,TP_SIZE,PP_SIZE,EP_SIZE,TOKENIZER,HOME \
+    exec sudo --preserve-env=MODEL,HOST,PORT,DOCKER_IMAGE,HF_TOKEN,MAX_BATCH_SIZE,TRUST_REMOTE_CODE,KV_CACHE_FREE_GPU_MEMORY_FRACTION,EXTRA_LLM_API_OPTIONS,BACKEND,TP_SIZE,PP_SIZE,EP_SIZE,TOKENIZER,MAX_SEQ_LEN,HOME \
       /usr/bin/env bash "$0"
   else
     echo "Error: docker access denied and sudo not available." >&2
@@ -68,6 +82,7 @@ if [[ -n "${PP_SIZE:-}" ]]; then EXTRA_ARGS+=(--pp_size "${PP_SIZE}"); fi
 if [[ -n "${EP_SIZE:-}" ]]; then EXTRA_ARGS+=(--ep_size "${EP_SIZE}"); fi
 if [[ -n "${TOKENIZER:-}" ]]; then EXTRA_ARGS+=(--tokenizer "${TOKENIZER}"); fi
 if [[ -n "${MAX_BATCH_SIZE:-}" ]]; then EXTRA_ARGS+=(--max_batch_size "${MAX_BATCH_SIZE}"); fi
+if [[ -n "${MAX_SEQ_LEN:-}" ]]; then EXTRA_ARGS+=(--max_seq_len "${MAX_SEQ_LEN}"); fi
 if [[ "${TRUST_REMOTE_CODE:-0}" == "1" ]]; then EXTRA_ARGS+=(--trust_remote_code); fi
 
 if [[ -n "${EXTRA_LLM_API_OPTIONS:-}" ]]; then
@@ -109,6 +124,7 @@ exec docker run --name trtllm_llm_server --rm "${DOCKER_TTY_ARGS[@]}" \
   -e "EP_SIZE=${EP_SIZE}" \
   -e "TOKENIZER=${TOKENIZER}" \
   -e "MAX_BATCH_SIZE=${MAX_BATCH_SIZE}" \
+  -e "MAX_SEQ_LEN=${MAX_SEQ_LEN}" \
   -e "TRUST_REMOTE_CODE=${TRUST_REMOTE_CODE}" \
   -e "KV_CACHE_FREE_GPU_MEMORY_FRACTION=${KV_CACHE_FREE_GPU_MEMORY_FRACTION}" \
   -e "EXTRA_LLM_API_OPTIONS=${EXTRA_LLM_API_OPTIONS}" \
