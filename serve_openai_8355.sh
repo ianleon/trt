@@ -39,6 +39,44 @@ MAX_SEQ_LEN="${MAX_SEQ_LEN:-}"
 MAX_INPUT_LEN="${MAX_INPUT_LEN:-}"
 EXTRA_SERVE_ARGS="${EXTRA_SERVE_ARGS:-}"
 
+is_positive_int() {
+  [[ "$1" =~ ^[1-9][0-9]*$ ]]
+}
+
+is_fraction_0_1() {
+  [[ "$1" =~ ^0(\.[0-9]+)?$|^1(\.0+)?$ ]]
+}
+
+if [[ -n "${MAX_BATCH_SIZE}" ]] && ! is_positive_int "${MAX_BATCH_SIZE}"; then
+  echo "Error: MAX_BATCH_SIZE must be a positive integer, got '${MAX_BATCH_SIZE}'." >&2
+  exit 1
+fi
+
+if [[ -n "${MAX_SEQ_LEN}" ]] && ! is_positive_int "${MAX_SEQ_LEN}"; then
+  echo "Error: MAX_SEQ_LEN must be a positive integer, got '${MAX_SEQ_LEN}'." >&2
+  exit 1
+fi
+
+if [[ -n "${MAX_INPUT_LEN}" ]] && ! is_positive_int "${MAX_INPUT_LEN}"; then
+  echo "Error: MAX_INPUT_LEN must be a positive integer, got '${MAX_INPUT_LEN}'." >&2
+  exit 1
+fi
+
+if [[ -n "${KV_CACHE_FREE_GPU_MEMORY_FRACTION}" ]] && ! is_fraction_0_1 "${KV_CACHE_FREE_GPU_MEMORY_FRACTION}"; then
+  echo "Error: KV_CACHE_FREE_GPU_MEMORY_FRACTION must be between 0.0 and 1.0, got '${KV_CACHE_FREE_GPU_MEMORY_FRACTION}'." >&2
+  exit 1
+fi
+
+if [[ -n "${BACKEND}" ]]; then
+  case "${BACKEND}" in
+    pytorch|tensorrt|trt|_autodeploy) ;;
+    *)
+      echo "Error: BACKEND must be one of pytorch|tensorrt|trt|_autodeploy, got '${BACKEND}'." >&2
+      exit 1
+      ;;
+  esac
+fi
+
 # If token is not in the current environment, try loading it from the user's
 # bash login profile (e.g. ~/.bash_profile) without printing the secret.
 if [[ -z "${HF_TOKEN}" && -n "${HOME:-}" ]] && command -v bash >/dev/null 2>&1; then
@@ -69,6 +107,9 @@ fi
 
 DOCKER_ENV=()
 if [[ -n "${HF_TOKEN}" ]]; then DOCKER_ENV+=(-e "HF_TOKEN=${HF_TOKEN}"); fi
+
+# If a previous container exists (manual run or stale crash), replace it.
+docker rm -f trtllm_llm_server >/dev/null 2>&1 || true
 
 TMP_SCRIPT="$(mktemp)"
 trap 'rm -f "${TMP_SCRIPT}"' EXIT

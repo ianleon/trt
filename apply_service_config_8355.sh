@@ -30,7 +30,7 @@ ${SUDO} systemctl restart "${SERVICE}"
 
 echo
 echo "Effective service env settings:"
-${SUDO} awk -F= '/^(MODEL|PORT|MAX_SEQ_LEN|MAX_BATCH_SIZE|KV_CACHE_FREE_GPU_MEMORY_FRACTION|HF_TOKEN)=/ {print}' "${ENV_DST}"
+${SUDO} awk -F= '/^(MODEL|BACKEND|PORT|MAX_INPUT_LEN|MAX_SEQ_LEN|MAX_BATCH_SIZE|KV_CACHE_FREE_GPU_MEMORY_FRACTION|EXTRA_SERVE_ARGS|HF_TOKEN)=/ {print}' "${ENV_DST}"
 
 echo
 echo "Startup log highlights since restart (${RESTART_TS}):"

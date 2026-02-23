@@ -1,111 +1,111 @@
 # TensorRT-LLM Serve on DGX
 
-This repo contains scripts to launch a TensorRT-LLM OpenAI-compatible API server.
+Scripts in this repo run a TensorRT-LLM OpenAI-compatible server on port `8355`.
+
+Current default service model:
+- `nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4` (via `_autodeploy`)
 
 ## Requirements
 
 - Docker with GPU runtime support on the DGX host.
-- Hugging Face token (`HF_TOKEN`) for downloading gated models (for example `meta-llama/*`).
+- Hugging Face token (`HF_TOKEN`) for gated models.
   - Manual run: if `HF_TOKEN` is exported in your bash profile, `serve_openai_8355.sh` will pick it up.
   - systemd service: set `HF_TOKEN=...` in `/etc/default/trtllm-openai-8355` (systemd does not load your shell profile).
 
-## Quick Start
+## Manual Launch
 
-Start server manually on port `8355`:
+Generic launcher:
 
 ```bash
 cd "$HOME/Server/trt"
 ./serve_openai_8355.sh
 ```
 
-Set a different model:
-
-```bash
-MODEL=Qwen/Qwen2.5-7B-Instruct ./serve_openai_8355.sh
-```
-
-Start Nemotron v3 (NVFP4):
+Nemotron v3 preset:
 
 ```bash
 ./start_nemotron_v3_8355.sh
 ```
 
-Lower VRAM reservation (useful for smaller models):
+GPT-OSS preset:
 
 ```bash
-KV_CACHE_FREE_GPU_MEMORY_FRACTION=0.20 MAX_BATCH_SIZE=8 ./serve_openai_8355.sh
+./start_gpt_oss.sh
 ```
 
-## Run As a Boot Service (systemd)
+Override model directly:
 
-This project includes a `systemd` service that starts at boot, runs in the background, and auto-restarts on failure.
+```bash
+MODEL=Qwen/Qwen2.5-7B-Instruct ./serve_openai_8355.sh
+```
 
-1. Install and start the service:
+Quick status check:
+
+```bash
+./status_8355.sh
+```
+
+## systemd Service (Boot + Restart)
+
+Install and start once:
 
 ```bash
 cd "$HOME/Server/trt"
 sudo ./install_trtllm_service.sh
 ```
 
-2. Edit runtime configuration:
-
-```bash
-sudo nano /etc/default/trtllm-openai-8355
-```
-
-Common settings:
-- `MODEL=...`
-- `PORT=8355`
-- `DOCKER_IMAGE=...`
-- `HF_TOKEN=...` (if needed)
-- `MAX_SEQ_LEN=16384`
-- `KV_CACHE_FREE_GPU_MEMORY_FRACTION=0.25` (lower this to reduce VRAM use)
-
-3. Restart after config changes:
-
-```bash
-sudo systemctl restart trtllm-openai-8355.service
-```
-
-Or run the helper script to apply env + restart + show verification logs:
+Apply repo env template and restart service:
 
 ```bash
 cd "$HOME/Server/trt"
 ./apply_service_config_8355.sh
 ```
 
-4. Verify service health:
+Edit runtime config directly:
 
 ```bash
+sudo nano /etc/default/trtllm-openai-8355
+```
+
+Common knobs:
+- `MODEL=...`
+- `BACKEND=...`
+- `PORT=8355`
+- `HF_TOKEN=...` (if needed)
+- `MAX_BATCH_SIZE=...`
+- `MAX_INPUT_LEN=...`
+- `MAX_SEQ_LEN=...`
+- `KV_CACHE_FREE_GPU_MEMORY_FRACTION=...`
+- `EXTRA_SERVE_ARGS=...`
+
+Restart and inspect:
+```bash
+sudo systemctl restart trtllm-openai-8355.service
 systemctl status trtllm-openai-8355.service
 journalctl -u trtllm-openai-8355.service -f
 ```
 
-### Service Files
+## Files
 
-- Unit file template: `systemd/trtllm-openai-8355.service`
-- Env template: `systemd/trtllm-openai-8355.env`
-- Installer: `install_trtllm_service.sh`
+- `serve_openai_8355.sh`: main launcher wrapper
+- `start_nemotron_v3_8355.sh`: Nemotron v3 preset
+- `start_gpt_oss.sh`: GPT-OSS preset
+- `status_8355.sh`: API/container/service status probe
+- `systemd/trtllm-openai-8355.service`: service unit template
+- `systemd/trtllm-openai-8355.env`: service env template
 
 ## Troubleshooting
 
-If startup fails with `KeyError: 'weight_scale'` while loading
-`Qwen/Qwen3-Coder-Next-FP8`, switch to:
-
-```bash
-MODEL=Qwen/Qwen3-Coder-Next
-```
-
-Then restart:
-
-```bash
-sudo systemctl restart trtllm-openai-8355.service
-```
-
-If `trtllm-openai-8355.service` is enabled, it will auto-recreate
-`trtllm_llm_server` and override manual model launches. Stop it before
-starting a manual container:
+Manual and systemd mode conflict if both are active because both use container name `trtllm_llm_server`.
 
 ```bash
 sudo systemctl stop trtllm-openai-8355.service
+```
+
+`Qwen/Qwen3-Coder-Next-FP8` currently fails on TRT-LLM 1.2.0rc6 with:
+- `KeyError: 'weight_scale'`
+
+If you must run Qwen3 Coder Next on this stack, use:
+```bash
+MODEL=Qwen/Qwen3-Coder-Next ./serve_openai_8355.sh
 ```
