@@ -7,10 +7,10 @@ Requires=docker.service
 [Service]
 Type=simple
 User=root
-WorkingDirectory=%h/Server/trt
+WorkingDirectory=__TRTLLM_WORKDIR__
 EnvironmentFile=/etc/default/trtllm-openai-8355
 ExecStartPre=-/usr/bin/docker rm -f trtllm_llm_server
-ExecStart=/usr/bin/env bash %h/Server/trt/serve_openai_8355.sh
+ExecStart=/usr/bin/env bash __TRTLLM_WORKDIR__/serve_openai_8355.sh
 Restart=always
 RestartSec=10
 TimeoutStartSec=0
