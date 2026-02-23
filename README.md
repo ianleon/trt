@@ -17,6 +17,12 @@ Set a different model:
 MODEL=meta-llama/Llama-3.1-8B-Instruct ./serve_openai_8355.sh
 ```
 
+Lower VRAM reservation (useful for smaller models):
+
+```bash
+KV_CACHE_FREE_GPU_MEMORY_FRACTION=0.20 MAX_BATCH_SIZE=8 ./serve_openai_8355.sh
+```
+
 ## Run As a Boot Service (systemd)
 
 This project includes a `systemd` service that starts at boot, runs in the background, and auto-restarts on failure.
@@ -39,6 +45,7 @@ Common settings:
 - `PORT=8355`
 - `DOCKER_IMAGE=...`
 - `HF_TOKEN=...` (if needed)
+- `KV_CACHE_FREE_GPU_MEMORY_FRACTION=0.25` (lower this to reduce VRAM use)
 
 3. Restart after config changes:
 

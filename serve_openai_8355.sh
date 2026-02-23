@@ -12,6 +12,7 @@ set -euo pipefail
 #   TP_SIZE=<int> PP_SIZE=<int> EP_SIZE=<int>
 #   TOKENIZER=<path_or_name>   # only needed for TensorRT engine path
 #   MAX_BATCH_SIZE=64 TRUST_REMOTE_CODE=1
+#   KV_CACHE_FREE_GPU_MEMORY_FRACTION=0.25
 #   EXTRA_LLM_API_OPTIONS=/path/to/config.yml  # if unset, a default config is generated in-container
 
 DEFAULT_MODEL="TinyLlama/TinyLlama-1.1B-Chat-v1.0"
@@ -23,6 +24,7 @@ DOCKER_IMAGE="${DOCKER_IMAGE:-nvcr.io/nvidia/tensorrt-llm/release:1.2.0rc6}"
 HF_TOKEN="${HF_TOKEN:-}"
 MAX_BATCH_SIZE="${MAX_BATCH_SIZE:-64}"
 TRUST_REMOTE_CODE="${TRUST_REMOTE_CODE:-1}"
+KV_CACHE_FREE_GPU_MEMORY_FRACTION="${KV_CACHE_FREE_GPU_MEMORY_FRACTION:-0.25}"
 EXTRA_LLM_API_OPTIONS="${EXTRA_LLM_API_OPTIONS:-}"
 BACKEND="${BACKEND:-}"
 TP_SIZE="${TP_SIZE:-}"
@@ -39,7 +41,7 @@ fi
 if ! docker info >/dev/null 2>&1; then
   if command -v sudo >/dev/null 2>&1; then
     echo "Docker access requires elevated privileges; re-running with sudo..." >&2
-    exec sudo --preserve-env=MODEL,HOST,PORT,DOCKER_IMAGE,HF_TOKEN,MAX_BATCH_SIZE,TRUST_REMOTE_CODE,EXTRA_LLM_API_OPTIONS,BACKEND,TP_SIZE,PP_SIZE,EP_SIZE,TOKENIZER,HOME \
+    exec sudo --preserve-env=MODEL,HOST,PORT,DOCKER_IMAGE,HF_TOKEN,MAX_BATCH_SIZE,TRUST_REMOTE_CODE,KV_CACHE_FREE_GPU_MEMORY_FRACTION,EXTRA_LLM_API_OPTIONS,BACKEND,TP_SIZE,PP_SIZE,EP_SIZE,TOKENIZER,HOME \
       /usr/bin/env bash "$0"
   else
     echo "Error: docker access denied and sudo not available." >&2
@@ -75,7 +77,7 @@ else
 print_iter_log: false
 kv_cache_config:
   dtype: "auto"
-  free_gpu_memory_fraction: 0.9
+  free_gpu_memory_fraction: ${KV_CACHE_FREE_GPU_MEMORY_FRACTION}
 cuda_graph_config:
   enable_padding: true
 disable_overlap_scheduler: true
@@ -108,6 +110,7 @@ exec docker run --name trtllm_llm_server --rm "${DOCKER_TTY_ARGS[@]}" \
   -e "TOKENIZER=${TOKENIZER}" \
   -e "MAX_BATCH_SIZE=${MAX_BATCH_SIZE}" \
   -e "TRUST_REMOTE_CODE=${TRUST_REMOTE_CODE}" \
+  -e "KV_CACHE_FREE_GPU_MEMORY_FRACTION=${KV_CACHE_FREE_GPU_MEMORY_FRACTION}" \
   -e "EXTRA_LLM_API_OPTIONS=${EXTRA_LLM_API_OPTIONS}" \
   "${DOCKER_ENV[@]}" \
   -v "${HOME}/.cache/huggingface/:/root/.cache/huggingface/" \
