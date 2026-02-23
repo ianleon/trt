@@ -1,0 +1,21 @@
+[Unit]
+Description=TensorRT-LLM OpenAI API server on port 8355
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/ianleon/Server/trt
+EnvironmentFile=/etc/default/trtllm-openai-8355
+ExecStartPre=-/usr/bin/docker rm -f trtllm_llm_server
+ExecStart=/usr/bin/env bash /home/ianleon/Server/trt/serve_openai_8355.sh
+Restart=always
+RestartSec=10
+TimeoutStartSec=0
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
