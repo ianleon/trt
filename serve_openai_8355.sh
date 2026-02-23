@@ -57,7 +57,7 @@ fi
 if ! docker info >/dev/null 2>&1; then
   if command -v sudo >/dev/null 2>&1; then
     echo "Docker access requires elevated privileges; re-running with sudo..." >&2
-    exec sudo --preserve-env=MODEL,HOST,PORT,DOCKER_IMAGE,HF_TOKEN,MAX_BATCH_SIZE,TRUST_REMOTE_CODE,KV_CACHE_FREE_GPU_MEMORY_FRACTION,EXTRA_LLM_API_OPTIONS,BACKEND,TP_SIZE,PP_SIZE,EP_SIZE,TOKENIZER,MAX_SEQ_LEN,HOME \
+    exec sudo --preserve-env=MODEL,HOST,PORT,DOCKER_IMAGE,HF_TOKEN,HUGGING_FACE_HUB_TOKEN,MAX_BATCH_SIZE,TRUST_REMOTE_CODE,KV_CACHE_FREE_GPU_MEMORY_FRACTION,EXTRA_LLM_API_OPTIONS,BACKEND,TP_SIZE,PP_SIZE,EP_SIZE,TOKENIZER,MAX_SEQ_LEN,MAX_INPUT_LEN,HOME \
       /usr/bin/env bash "$0"
   else
     echo "Error: docker access denied and sudo not available." >&2
