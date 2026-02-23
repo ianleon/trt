@@ -16,6 +16,7 @@ set -euo pipefail
 #   MAX_INPUT_LEN=<int>
 #   KV_CACHE_FREE_GPU_MEMORY_FRACTION=0.25
 #   EXTRA_LLM_API_OPTIONS=/path/to/config.yml  # if unset, a default config is generated in-container
+#   EXTRA_SERVE_ARGS="--reasoning_parser nano-v3"
 
 DEFAULT_MODEL="TinyLlama/TinyLlama-1.1B-Chat-v1.0"
 MODEL="${MODEL:-${1:-${DEFAULT_MODEL}}}"
@@ -36,6 +37,7 @@ EP_SIZE="${EP_SIZE:-}"
 TOKENIZER="${TOKENIZER:-}"
 MAX_SEQ_LEN="${MAX_SEQ_LEN:-}"
 MAX_INPUT_LEN="${MAX_INPUT_LEN:-}"
+EXTRA_SERVE_ARGS="${EXTRA_SERVE_ARGS:-}"
 
 # If token is not in the current environment, try loading it from the user's
 # bash login profile (e.g. ~/.bash_profile) without printing the secret.
@@ -57,7 +59,7 @@ fi
 if ! docker info >/dev/null 2>&1; then
   if command -v sudo >/dev/null 2>&1; then
     echo "Docker access requires elevated privileges; re-running with sudo..." >&2
-    exec sudo --preserve-env=MODEL,HOST,PORT,DOCKER_IMAGE,HF_TOKEN,HUGGING_FACE_HUB_TOKEN,MAX_BATCH_SIZE,TRUST_REMOTE_CODE,KV_CACHE_FREE_GPU_MEMORY_FRACTION,EXTRA_LLM_API_OPTIONS,BACKEND,TP_SIZE,PP_SIZE,EP_SIZE,TOKENIZER,MAX_SEQ_LEN,MAX_INPUT_LEN,HOME \
+    exec sudo --preserve-env=MODEL,HOST,PORT,DOCKER_IMAGE,HF_TOKEN,HUGGING_FACE_HUB_TOKEN,MAX_BATCH_SIZE,TRUST_REMOTE_CODE,KV_CACHE_FREE_GPU_MEMORY_FRACTION,EXTRA_LLM_API_OPTIONS,EXTRA_SERVE_ARGS,BACKEND,TP_SIZE,PP_SIZE,EP_SIZE,TOKENIZER,MAX_SEQ_LEN,MAX_INPUT_LEN,HOME \
       /usr/bin/env bash "$0"
   else
     echo "Error: docker access denied and sudo not available." >&2
@@ -86,6 +88,11 @@ if [[ -n "${TOKENIZER:-}" ]]; then EXTRA_ARGS+=(--tokenizer "${TOKENIZER}"); fi
 if [[ -n "${MAX_BATCH_SIZE:-}" ]]; then EXTRA_ARGS+=(--max_batch_size "${MAX_BATCH_SIZE}"); fi
 if [[ -n "${MAX_SEQ_LEN:-}" ]]; then EXTRA_ARGS+=(--max_seq_len "${MAX_SEQ_LEN}"); fi
 if [[ "${TRUST_REMOTE_CODE:-0}" == "1" ]]; then EXTRA_ARGS+=(--trust_remote_code); fi
+if [[ -n "${EXTRA_SERVE_ARGS:-}" ]]; then
+  # Allow advanced flags not directly exposed by this wrapper.
+  # shellcheck disable=SC2206
+  EXTRA_ARGS+=(${EXTRA_SERVE_ARGS})
+fi
 
 if [[ -n "${EXTRA_LLM_API_OPTIONS:-}" ]]; then
   EXTRA_ARGS+=(--extra_llm_api_options "${EXTRA_LLM_API_OPTIONS}")
@@ -132,6 +139,7 @@ exec docker run --name trtllm_llm_server --rm "${DOCKER_TTY_ARGS[@]}" \
   -e "TRUST_REMOTE_CODE=${TRUST_REMOTE_CODE}" \
   -e "KV_CACHE_FREE_GPU_MEMORY_FRACTION=${KV_CACHE_FREE_GPU_MEMORY_FRACTION}" \
   -e "EXTRA_LLM_API_OPTIONS=${EXTRA_LLM_API_OPTIONS}" \
+  -e "EXTRA_SERVE_ARGS=${EXTRA_SERVE_ARGS}" \
   "${DOCKER_ENV[@]}" \
   -v "${HOME}/.cache/huggingface/:/root/.cache/huggingface/" \
   -v "${TMP_SCRIPT}:/tmp/run_trtllm.sh:ro" \

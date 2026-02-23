@@ -24,6 +24,12 @@ Set a different model:
 MODEL=Qwen/Qwen2.5-7B-Instruct ./serve_openai_8355.sh
 ```
 
+Start Nemotron v3 (NVFP4):
+
+```bash
+./start_nemotron_v3_8355.sh
+```
+
 Lower VRAM reservation (useful for smaller models):
 
 ```bash
@@ -80,3 +86,26 @@ journalctl -u trtllm-openai-8355.service -f
 - Unit file template: `systemd/trtllm-openai-8355.service`
 - Env template: `systemd/trtllm-openai-8355.env`
 - Installer: `install_trtllm_service.sh`
+
+## Troubleshooting
+
+If startup fails with `KeyError: 'weight_scale'` while loading
+`Qwen/Qwen3-Coder-Next-FP8`, switch to:
+
+```bash
+MODEL=Qwen/Qwen3-Coder-Next
+```
+
+Then restart:
+
+```bash
+sudo systemctl restart trtllm-openai-8355.service
+```
+
+If `trtllm-openai-8355.service` is enabled, it will auto-recreate
+`trtllm_llm_server` and override manual model launches. Stop it before
+starting a manual container:
+
+```bash
+sudo systemctl stop trtllm-openai-8355.service
+```
