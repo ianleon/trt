@@ -15,10 +15,10 @@ echo
 echo "== Docker containers =="
 if command -v rg >/dev/null 2>&1; then
   docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}' \
-    | { head -n 1; rg 'trtllm_llm_server|open-webui' || true; }
+    | { head -n 1; rg 'trtllm_llm_server' || true; }
 else
   docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}' \
-    | { head -n 1; grep -E 'trtllm_llm_server|open-webui' || true; }
+    | { head -n 1; grep -E 'trtllm_llm_server' || true; }
 fi
 
 if command -v systemctl >/dev/null 2>&1; then

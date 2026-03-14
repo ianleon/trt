@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_SRC="${ROOT_DIR}/systemd/trtllm-openai-8355.env"
 ENV_DST="/etc/default/trtllm-openai-8355"
 SERVICE="trtllm-openai-8355.service"
+UNIT_DST="/etc/systemd/system/${SERVICE}"
 
 if [[ ! -f "${ENV_SRC}" ]]; then
   echo "Error: missing env template: ${ENV_SRC}" >&2
@@ -30,7 +31,17 @@ ${SUDO} systemctl restart "${SERVICE}"
 
 echo
 echo "Effective service env settings:"
-${SUDO} awk -F= '/^(MODEL|BACKEND|PORT|MAX_INPUT_LEN|MAX_SEQ_LEN|MAX_BATCH_SIZE|KV_CACHE_FREE_GPU_MEMORY_FRACTION|EXTRA_SERVE_ARGS|HF_TOKEN)=/ {print}' "${ENV_DST}"
+${SUDO} awk -F= '/^(HOST|PORT|DOCKER_IMAGE|MAX_INPUT_LEN|MAX_SEQ_LEN|MAX_BATCH_SIZE|KV_CACHE_FREE_GPU_MEMORY_FRACTION|HF_TOKEN)=/ {print}' "${ENV_DST}"
+
+echo
+echo "Installed service ExecStart:"
+EXEC_START="$(${SUDO} awk -F= '/^ExecStart=/{print $2}' "${UNIT_DST}" 2>/dev/null || true)"
+echo "${EXEC_START:-<missing>}"
+if [[ "${EXEC_START}" != *"serve_nemotron_8355.sh"* ]]; then
+  echo
+  echo "WARNING: Service unit is not pointing to serve_nemotron_8355.sh."
+  echo "Run: sudo ./install_trtllm_service.sh"
+fi
 
 echo
 echo "Startup log highlights since restart (${RESTART_TS}):"
